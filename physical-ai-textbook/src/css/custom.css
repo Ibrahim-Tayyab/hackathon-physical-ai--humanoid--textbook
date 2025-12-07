@@ -1,0 +1,172 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================
+   Dark Mode (Default)
+   =========================== */
+:root {
+  /* Background Colors - Dark */
+  --bg-darker: #050810;
+  --bg-dark: #0a0e1a;
+  --bg-card: #111827;
+  --bg-card-hover: #1a2332;
+
+  /* Primary Colors */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+
+  /* Text Colors - Dark */
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  /* Border Colors - Dark */
+  --border: #1f2937;
+  --border-light: #374151;
+
+  /* Docusaurus overrides - Dark */
+  --ifm-color-primary: #3b82f6;
+  --ifm-color-primary-dark: #2563eb;
+  --ifm-color-primary-darker: #1d4ed8;
+  --ifm-color-primary-darkest: #1e40af;
+  --ifm-color-primary-light: #60a5fa;
+  --ifm-color-primary-lighter: #93c5fd;
+  --ifm-color-primary-lightest: #bfdbfe;
+  --ifm-background-color: #050810;
+  --ifm-navbar-background-color: #0a0e1a;
+  --ifm-font-color-base: #ffffff;
+  --ifm-heading-color: #ffffff;
+  --ifm-link-color: #3b82f6;
+  --ifm-menu-color: #9ca3af;
+  --ifm-footer-background-color: #0a0e1a;
+  --ifm-code-background: #1f2937;
+  --ifm-table-stripe-background: rgba(255, 255, 255, 0.03);
+}
+
+/* ===========================
+   Light Mode
+   =========================== */
+[data-theme='light'] {
+  /* Background Colors - Light */
+  --bg-darker: #ffffff;
+  --bg-dark: #f9fafb;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3f4f6;
+
+  /* Primary Colors (same) */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+
+  /* Text Colors - Light */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+
+  /* Border Colors - Light */
+  --border: #e5e7eb;
+  --border-light: #d1d5db;
+
+  /* Docusaurus overrides - Light */
+  --ifm-color-primary: #2563eb;
+  --ifm-color-primary-dark: #1d4ed8;
+  --ifm-color-primary-darker: #1e40af;
+  --ifm-color-primary-darkest: #1e3a8a;
+  --ifm-color-primary-light: #3b82f6;
+  --ifm-color-primary-lighter: #60a5fa;
+  --ifm-color-primary-lightest: #93c5fd;
+  --ifm-background-color: #ffffff;
+  --ifm-navbar-background-color: #f9fafb;
+  --ifm-font-color-base: #111827;
+  --ifm-heading-color: #111827;
+  --ifm-link-color: #2563eb;
+  --ifm-menu-color: #4b5563;
+  --ifm-footer-background-color: #f9fafb;
+  --ifm-code-background: #f3f4f6;
+  --ifm-table-stripe-background: rgba(0, 0, 0, 0.03);
+  --ifm-navbar-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Don't animate transforms and opacity */
+*:not([class*='motion']) {
+  transition-property: background-color, border-color, color;
+}
+
+/* Dark theme specific styles */
+html[data-theme='dark'] {
+  --ifm-background-color: #050810;
+  --ifm-navbar-background-color: #0a0e1a;
+  --ifm-footer-background-color: #0a0e1a;
+}
+
+html[data-theme='dark'] .navbar {
+  background: var(--ifm-navbar-background-color);
+  border-bottom: 1px solid var(--border);
+}
+
+html[data-theme='dark'] .footer {
+  background: var(--ifm-footer-background-color);
+  border-top: 1px solid var(--border);
+}
+
+/* Light theme specific styles */
+html[data-theme='light'] .navbar {
+  background: var(--ifm-navbar-background-color);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--ifm-navbar-shadow);
+}
+
+html[data-theme='light'] .footer {
+  background: var(--ifm-footer-background-color);
+  border-top: 1px solid var(--border);
+}
+
+/* Card styles adapt to theme */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-light);
+}
+
+/* Code blocks adapt to theme */
+html[data-theme='light'] pre,
+html[data-theme='light'] code {
+  background: var(--ifm-code-background);
+  border-color: var(--border);
+}
+
+html[data-theme='dark'] pre,
+html[data-theme='dark'] code {
+  background: var(--ifm-code-background);
+  border-color: var(--border);
+}

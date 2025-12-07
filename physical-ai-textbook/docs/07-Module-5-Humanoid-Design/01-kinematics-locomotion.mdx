@@ -1,0 +1,363 @@
+---
+sidebar_position: 1
+title: "Humanoid Kinematics Fundamentals"
+description: "Understanding bipedal locomotion, inverse kinematics, and balance control"
+keywords: [humanoid kinematics, bipedal walking, inverse kinematics, balance control]
+---
+
+# Humanoid Kinematics Fundamentals
+
+## Introduction
+
+Humanoid robots represent the pinnacle of robotic engineering, requiring sophisticated control systems to mimic human motion. This chapter explores the mathematical and algorithmic foundations of humanoid locomotion.
+
+---
+
+## 1. Kinematic Chains
+
+### **Forward Kinematics**
+Given joint angles θ₁, θ₂, ..., θₙ, calculate the end-effector position and orientation.
+
+**Denavit-Hartenberg (DH) Parameters:**
+
+| Joint | θ | d | a | α |
+|-------|---|---|---|---|
+| 1 (Hip) | θ₁ | 0 | 0 | 90° |
+| 2 (Knee) | θ₂ | L₁ | 0 | 0° |
+| 3 (Ankle) | θ₃ | L₂ | 0 | 0° |
+
+**Transformation Matrix:**
+```
+T = T₁ × T₂ × T₃
+```
+
+### **Inverse Kinematics (IK)**
+Given desired end-effector pose, solve for joint angles.
+
+**Analytical IK (for simple chains):**
+```python
+import numpy as np
+
+def solve_ik_2dof(x_target, y_target, L1, L2):
+    """
+    Solve 2-DOF planar arm IK
+    """
+    # Distance to target
+    D = np.sqrt(x_target**2 + y_target**2)
+    
+    # Check reachability
+    if D > (L1 + L2) or D < abs(L1 - L2):
+        raise ValueError("Target unreachable")
+    
+    # Elbow-up solution
+    cos_theta2 = (D**2 - L1**2 - L2**2) / (2 * L1 * L2)
+    theta2 = np.arccos(cos_theta2)
+    
+    # Shoulder angle
+    k1 = L1 + L2 * np.cos(theta2)
+    k2 = L2 * np.sin(theta2)
+    theta1 = np.arctan2(y_target, x_target) - np.arctan2(k2, k1)
+    
+    return theta1, theta2
+```
+
+**Numerical IK (Jacobian-based):**
+```python
+def jacobian_ik(target_pose, current_angles, max_iter=100, tol=1e-3):
+    """
+    Iterative IK using Jacobian pseudo-inverse
+    """
+    q = current_angles.copy()
+    
+    for i in range(max_iter):
+        # Current end-effector pose
+        current_pose = forward_kinematics(q)
+        
+        # Error
+        error = target_pose - current_pose
+        if np.linalg.norm(error) < tol:
+            return q
+        
+        # Jacobian
+        J = compute_jacobian(q)
+        
+        # Update: Δq = J⁺ · error
+        delta_q = np.linalg.pinv(J) @ error
+        q += 0.1 * delta_q  # Learning rate
+    
+    return q
+```
+
+---
+
+## 2. Bipedal Locomotion
+
+### **2.1 Zero Moment Point (ZMP)**
+
+The ZMP is the point on the ground where the net moment from gravity and inertia is zero. For stable walking, ZMP must remain within the **support polygon**.
+
+**ZMP Equation:**
+```
+ZMP_x = (Σ m_i · (z̈_i + g) · x_i) / (Σ m_i · (z̈_i + g))
+```
+
+**Python Implementation:**
+```python
+def calculate_zmp(masses, positions, accelerations, g=9.81):
+    """
+    Calculate Zero Moment Point
+    
+    Args:
+        masses: List of link masses [m1, m2, ...]
+        positions: List of (x, y, z) positions
+        accelerations: List of (ẍ, ÿ, z̈) accelerations
+        g: Gravity constant
+    """
+    numerator_x = 0
+    numerator_y = 0
+    denominator = 0
+    
+    for m, pos, acc in zip(masses, positions, accelerations):
+        force_z = m * (acc[2] + g)
+        numerator_x += force_z * pos[0]
+        numerator_y += force_z * pos[1]
+        denominator += force_z
+    
+    zmp_x = numerator_x / denominator
+    zmp_y = numerator_y / denominator
+    
+    return zmp_x, zmp_y
+```
+
+### **2.2 Gait Planning**
+
+**Walking Cycle Phases:**
+1. **Double Support:** Both feet on ground (10-20% of cycle)
+2. **Single Support:** One foot on ground (30-40%)
+3. **Swing Phase:** Foot in air (30-40%)
+
+**Trajectory Generation (Cubic Spline):**
+```python
+from scipy.interpolate import CubicSpline
+
+def generate_foot_trajectory(start, end, height, num_points=50):
+    """
+    Generate smooth foot swing trajectory
+    """
+    # Waypoints: start → apex → end
+    x_waypoints = [start[0], (start[0] + end[0])/2, end[0]]
+    y_waypoints = [start[1], (start[1] + end[1])/2, end[1]]
+    z_waypoints = [0, height, 0]
+    
+    t = [0, 0.5, 1.0]
+    
+    cs_x = CubicSpline(t, x_waypoints)
+    cs_y = CubicSpline(t, y_waypoints)
+    cs_z = CubicSpline(t, z_waypoints)
+    
+    t_interp = np.linspace(0, 1, num_points)
+    
+    return np.array([cs_x(t_interp), cs_y(t_interp), cs_z(t_interp)]).T
+```
+
+---
+
+## 3. Balance Control
+
+### **3.1 Center of Mass (CoM) Tracking**
+
+Maintain CoM within support polygon:
+
+```python
+def com_controller(com_current, com_target, zmp_current, support_polygon, kp=5.0):
+    """
+    Proportional controller for CoM
+    """
+    # Error
+    error = com_target - com_current
+    
+    # Check ZMP constraint
+    if not is_point_in_polygon(zmp_current, support_polygon):
+        # Emergency step adjustment
+        return adjust_foot_placement(zmp_current, support_polygon)
+    
+    # Control output (desired CoM acceleration)
+    accel = kp * error
+    
+    return accel
+```
+
+### **3.2 Ankle and Hip Strategies**
+
+**Ankle Strategy (for small disturbances):**
+```python
+def ankle_torque(com_error, ankle_stiffness=200):
+    """
+    Generate corrective ankle torque
+    """
+    return -ankle_stiffness * com_error
+```
+
+**Hip Strategy (for large disturbances):**
+```python
+def hip_bend(com_error, max_bend=0.3):
+    """
+    Bend hips to shift CoM
+    """
+    bend_angle = np.clip(com_error * 0.5, -max_bend, max_bend)
+    return bend_angle
+```
+
+---
+
+## 4. Jacobian and Velocity Control
+
+### **4.1 Differential Kinematics**
+
+Relate joint velocities to end-effector velocities:
+
+```
+v = J(q) · q̇
+```
+
+**Example (3-DOF arm):**
+```python
+def compute_jacobian(q, L1, L2, L3):
+    """
+    Compute Jacobian for 3-DOF planar arm
+    """
+    theta1, theta2, theta3 = q
+    
+    J = np.array([
+        [-L1*np.sin(theta1) - L2*np.sin(theta1+theta2) - L3*np.sin(theta1+theta2+theta3),
+         -L2*np.sin(theta1+theta2) - L3*np.sin(theta1+theta2+theta3),
+         -L3*np.sin(theta1+theta2+theta3)],
+        
+        [L1*np.cos(theta1) + L2*np.cos(theta1+theta2) + L3*np.cos(theta1+theta2+theta3),
+         L2*np.cos(theta1+theta2) + L3*np.cos(theta1+theta2+theta3),
+         L3*np.cos(theta1+theta2+theta3)]
+    ])
+    
+    return J
+```
+
+### **4.2 Singularity Avoidance**
+
+Detect and avoid kinematic singularities:
+
+```python
+def detect_singularity(J, threshold=1e-3):
+    """
+    Check if Jacobian is near-singular
+    """
+    det = np.linalg.det(J @ J.T)
+    return abs(det) < threshold
+
+def damped_pseudo_inverse(J, lambda_=0.01):
+    """
+    Damped Least Squares (DLS) inverse
+    """
+    return J.T @ np.linalg.inv(J @ J.T + lambda_**2 * np.eye(J.shape[0]))
+```
+
+---
+
+## 5. Practical Implementation with ROS 2
+
+### **5.1 IK Service Node**
+
+```python
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+
+class HumanoidIKService(Node):
+    def __init__(self):
+        super().__init__('ik_service')
+        self.subscription = self.create_subscription(
+            Pose,
+            '/target_pose',
+            self.pose_callback,
+            10
+        )
+        self.joint_pub = self.create_publisher(JointState, '/joint_commands', 10)
+    
+    def pose_callback(self, msg):
+        # Extract target position
+        x = msg.position.x
+        y = msg.position.y
+        z = msg.position.z
+        
+        # Solve IK
+        joint_angles = self.solve_ik([x, y, z])
+        
+        # Publish
+        joint_msg = JointState()
+        joint_msg.position = joint_angles
+        self.joint_pub.publish(joint_msg)
+    
+    def solve_ik(self, target):
+        # Your IK solver here
+        pass
+
+def main():
+    rclpy.init()
+    node = HumanoidIKService()
+    rclpy.spin(node)
+```
+
+---
+
+## 6. Case Study: Walking Gait
+
+**Objective:** Generate a stable walking gait for a humanoid.
+
+**Steps:**
+1. Plan ZMP trajectory within support polygon
+2. Compute CoM trajectory from ZMP using dynamics
+3. Solve whole-body IK for joint trajectories
+4. Execute with torque control
+
+**Code Skeleton:**
+```python
+def plan_walking_gait(step_length, step_height, num_steps):
+    """
+    High-level walking planner
+    """
+    trajectories = []
+    
+    for i in range(num_steps):
+        # Swing foot trajectory
+        foot_traj = generate_foot_trajectory(
+            start=[i*step_length, 0, 0],
+            end=[(i+1)*step_length, 0, 0],
+            height=step_height
+        )
+        
+        # ZMP trajectory (stays within support polygon)
+        zmp_traj = plan_zmp_trajectory(foot_traj)
+        
+        # CoM trajectory
+        com_traj = zmp_to_com(zmp_traj)
+        
+        # IK for all timesteps
+        joint_traj = whole_body_ik(foot_traj, com_traj)
+        
+        trajectories.append(joint_traj)
+    
+    return trajectories
+```
+
+---
+
+## Summary
+
+This chapter covered:
+- ✅ Forward and Inverse Kinematics
+- ✅ ZMP and Bipedal Stability
+- ✅ Gait Planning and Trajectory Generation
+- ✅ Balance Control (Ankle/Hip Strategies)
+- ✅ Jacobian-based Velocity Control
+
+**Next:** Module 5.2 - Hands and Grasping Control

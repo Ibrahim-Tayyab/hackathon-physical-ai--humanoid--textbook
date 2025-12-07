@@ -1,0 +1,39 @@
+physical-ai:
+  label: Physical AI
+  permalink: /physical-ai
+  description: Physical AI and embodied intelligence topics
+
+humanoids:
+  label: Humanoid Robotics
+  permalink: /humanoids
+  description: Articles about humanoid robot design and control
+
+ros2:
+  label: ROS 2
+  permalink: /ros2
+  description: Robot Operating System tutorials and tips
+
+vla:
+  label: Vision-Language-Action
+  permalink: /vla
+  description: Multimodal AI for robotic systems
+
+research:
+  label: Research
+  permalink: /research
+  description: Latest research papers and breakthroughs
+
+tutorials:
+  label: Tutorials
+  permalink: /tutorials
+  description: Step-by-step guides and how-tos
+
+isaac:
+  label: NVIDIA Isaac
+  permalink: /isaac
+  description: Isaac Sim and Isaac ROS content
+
+simulation:
+  label: Simulation
+  permalink: /simulation
+  description: Gazebo, Unity, and digital twin topics

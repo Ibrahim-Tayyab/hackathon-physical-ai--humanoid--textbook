@@ -1,0 +1,430 @@
+---
+sidebar_position: 3
+title: "Modeling the Body (URDF)"
+description: "Defining robot structure with URDF - Links, Joints, and Kinematics"
+---
+
+# Modeling the Body: URDF for Humanoid Robots
+
+## From Software to Structure
+
+You've learned how ROS 2 nodes **think** (nodes) and **communicate** (topics). But how does ROS 2 understand a robot's **physical body**?
+
+Enter **URDF (Unified Robot Description Format)**: an XML-based language that defines:
+- **Links**: Rigid body parts (bones)
+- **Joints**: Connections between links (muscles/hinges)
+- **Sensors**: Cameras, LIDAR, IMUs
+- **Collision Geometry**: For physics simulation
+- **Visual Geometry**: For 3D visualization
+
+:::tip Biological Analogy
+If nodes are the **nervous system** (brain signals), URDF is the **skeletal system** (bones and joints). Without URDF, ROS 2 can send movement commands, but it doesn't know *what* it's moving or *how* those parts are connected.
+:::
+
+---
+
+## Why URDF Matters for Physical AI
+
+URDF files serve three critical purposes:
+
+### 1. **Visualization** (RViz2)
+See your robot in 3D, visualize sensor data, and debug without hardware.
+
+### 2. **Simulation** (Gazebo, Isaac Sim)
+Physics engines need to know:
+- Mass and inertia of each link
+- Joint limits (how far an elbow can bend)
+- Collision shapes (to prevent self-collision)
+
+### 3. **Motion Planning** (MoveIt2)
+Inverse kinematics solvers need the kinematic chain:
+- "To reach this XYZ position, which joints must rotate by how many degrees?"
+
+:::info Real-World Example
+Boston Dynamics' Atlas humanoid has **28 joints** (shoulders, elbows, hips, knees, ankles). Its URDF file defines every joint's rotation axis, limits, and mass—allowing simulation engines to predict whether a jumping motion will succeed **before** risking the $2M robot.
+:::
+
+---
+
+## URDF Basics: Links and Joints
+
+### What is a Link?
+
+A **link** represents a **rigid body part**:
+- For a humanoid: torso, upper arm, forearm, thigh, shin
+- For a wheeled robot: chassis, wheel
+- For a drone: frame, propeller
+
+Each link has:
+- **Mass** and **Inertia** (for physics)
+- **Visual Geometry** (3D mesh or primitive shape)
+- **Collision Geometry** (simplified shape for collision detection)
+
+### What is a Joint?
+
+A **joint** connects two links and defines **how** they move relative to each other:
+
+| Joint Type | Description | Example |
+|------------|-------------|---------|
+| **Fixed** | No movement (welded together) | Torso to pelvis |
+| **Revolute** | Rotates around axis (1 DOF) | Elbow, knee |
+| **Continuous** | Rotates 360° infinitely | Wheel axle |
+| **Prismatic** | Slides along axis (1 DOF) | Telescope, gripper |
+
+:::note Degrees of Freedom (DOF)
+A humanoid arm typically has **7 DOF**: 3 shoulder joints, 1 elbow, 3 wrist joints. This matches human arm mobility and enables complex manipulation tasks.
+:::
+
+---
+
+## URDF XML Structure
+
+Here's a minimal URDF file for a **single-link robot**:
+
+```xml
+<?xml version="1.0"?>
+<robot name="simple_bot">
+  
+  <!-- Base Link (chassis) -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.5 0.3 0.1"/>  <!-- 50cm x 30cm x 10cm box -->
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.8 1"/>  <!-- Blue color (RGBA) -->
+      </material>
+    </visual>
+    
+    <collision>
+      <geometry>
+        <box size="0.5 0.3 0.1"/>  <!-- Same as visual for simplicity -->
+      </geometry>
+    </collision>
+    
+    <inertial>
+      <mass value="10.0"/>  <!-- 10 kg -->
+      <inertia ixx="0.1" ixy="0.0" ixz="0.0"
+               iyy="0.1" iyz="0.0"
+               izz="0.1"/>
+    </inertial>
+  </link>
+
+</robot>
+```
+
+**Key Components:**
+- `<robot name="...">`: Root element, names the robot
+- `<link name="...">`: Defines a rigid body
+- `<visual>`: What you see in RViz (mesh or primitive shape)
+- `<collision>`: Simplified shape for physics (often a box/cylinder for performance)
+- `<inertial>`: Mass (kg) and inertia tensor (kg·m²)
+
+---
+
+## Real Example: Robot Leg (Humanoid)
+
+Let's model a **single leg** with 3 joints: hip, knee, ankle.
+
+```xml
+<?xml version="1.0"?>
+<robot name="humanoid_leg">
+  
+  <!-- 1. PELVIS (Fixed to world) -->
+  <link name="pelvis">
+    <visual>
+      <geometry>
+        <box size="0.2 0.3 0.15"/>  <!-- 20cm x 30cm x 15cm -->
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.3 0.15"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.05" ixy="0" ixz="0"
+               iyy="0.05" iyz="0"
+               izz="0.05"/>
+    </inertial>
+  </link>
+
+  <!-- 2. THIGH (Upper leg) -->
+  <link name="thigh">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.4"/>  <!-- 5cm diameter, 40cm long -->
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.05" length="0.4"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.0"/>
+      <inertia ixx="0.04" ixy="0" ixz="0"
+               iyy="0.04" iyz="0"
+               izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- 3. SHIN (Lower leg) -->
+  <link name="shin">
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.35"/>  <!-- 4cm diameter, 35cm long -->
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.04" length="0.35"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.02" ixy="0" ixz="0"
+               iyy="0.02" iyz="0"
+               izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- 4. FOOT -->
+  <link name="foot">
+    <visual>
+      <geometry>
+        <box size="0.12 0.06 0.04"/>  <!-- 12cm x 6cm x 4cm -->
+      </geometry>
+      <material name="gray">
+        <color rgba="0.3 0.3 0.3 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.12 0.06 0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0" ixz="0"
+               iyy="0.001" iyz="0"
+               izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- JOINT 1: Hip (Pelvis to Thigh) -->
+  <joint name="hip_joint" type="revolute">
+    <parent link="pelvis"/>
+    <child link="thigh"/>
+    <origin xyz="0 0 -0.075" rpy="0 0 0"/>  <!-- Position: 7.5cm down from pelvis center -->
+    <axis xyz="0 1 0"/>  <!-- Rotates around Y-axis (forward/backward) -->
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="2.0"/>
+    <!-- Limits: -90° to +90°, max torque 100 Nm, max speed 2 rad/s -->
+  </joint>
+
+  <!-- JOINT 2: Knee (Thigh to Shin) -->
+  <joint name="knee_joint" type="revolute">
+    <parent link="thigh"/>
+    <child link="shin"/>
+    <origin xyz="0 0 -0.2" rpy="0 0 0"/>  <!-- 20cm down from thigh center -->
+    <axis xyz="0 1 0"/>  <!-- Rotates around Y-axis -->
+    <limit lower="0" upper="2.36" effort="80" velocity="2.0"/>
+    <!-- Limits: 0° to 135° (knee only bends one way), max torque 80 Nm -->
+  </joint>
+
+  <!-- JOINT 3: Ankle (Shin to Foot) -->
+  <joint name="ankle_joint" type="revolute">
+    <parent link="shin"/>
+    <child link="foot"/>
+    <origin xyz="0 0 -0.175" rpy="0 0 0"/>  <!-- 17.5cm down from shin center -->
+    <axis xyz="0 1 0"/>  <!-- Rotates around Y-axis -->
+    <limit lower="-0.79" upper="0.79" effort="50" velocity="2.0"/>
+    <!-- Limits: -45° to +45°, max torque 50 Nm -->
+  </joint>
+
+</robot>
+```
+
+---
+
+## Breaking Down the Leg Model
+
+### Link Definitions
+
+**Thigh Link (Lines 28-50):**
+- **Geometry**: Cylinder (approximates human thigh shape)
+- **Dimensions**: 5cm radius, 40cm length
+- **Mass**: 3.0 kg (realistic for adult human)
+- **Inertia**: Higher along length axis (cylinder rotates differently than sphere)
+
+### Joint Definitions
+
+**Hip Joint (Lines 111-117):**
+```xml
+<joint name="hip_joint" type="revolute">
+  <parent link="pelvis"/>
+  <child link="thigh"/>
+  <origin xyz="0 0 -0.075" rpy="0 0 0"/>
+  <axis xyz="0 1 0"/>
+  <limit lower="-1.57" upper="1.57" effort="100" velocity="2.0"/>
+</joint>
+```
+
+**Key Attributes:**
+- `parent`/`child`: Kinematic chain (pelvis → thigh)
+- `origin`: Position offset (7.5cm below pelvis center)
+- `axis`: Rotation axis (Y-axis = pitch/forward-backward)
+- `limit`:
+  - `lower`/`upper`: -90° to +90° (in radians)
+  - `effort`: Max torque motor can apply (100 Nm)
+  - `velocity`: Max rotational speed (2 rad/s ≈ 115°/s)
+
+:::warning Joint Limits
+Setting accurate limits is critical:
+- **Too wide**: Robot tries impossible movements and breaks simulation
+- **Too narrow**: Robot can't perform required tasks
+Always reference real hardware specs (e.g., Unitree G1 hip joint: ±120°).
+:::
+
+---
+
+## Visualizing URDF in RViz
+
+Once you have a URDF file, visualize it:
+
+### Step 1: Launch RViz with URDF
+
+```bash
+# Install joint_state_publisher_gui (if not already installed)
+sudo apt install ros-humble-joint-state-publisher-gui
+
+# Launch visualization
+ros2 launch urdf_tutorial display.launch.py model:=./humanoid_leg.urdf
+```
+
+### Step 2: Interact with Joints
+
+A GUI window appears with **sliders for each joint**:
+- Move the hip slider → thigh rotates
+- Move the knee slider → shin bends
+- Move the ankle slider → foot tilts
+
+### Step 3: View in RViz
+
+RViz shows the 3D model with adjustable joint positions in real-time.
+
+---
+
+## URDF for Complete Humanoids
+
+A full humanoid URDF typically includes:
+
+| Component | Links | Joints | Description |
+|-----------|-------|--------|-------------|
+| **Torso** | 1-3 | 0-2 | Chest, spine (sometimes articulated) |
+| **Arms** | 6 (2×3) | 14 (2×7) | Shoulder (3 DOF), elbow (1 DOF), wrist (3 DOF) |
+| **Legs** | 6 (2×3) | 12 (2×6) | Hip (3 DOF), knee (1 DOF), ankle (2 DOF) |
+| **Hands** | 30+ | 20+ | Fingers (often simplified to 1 DOF per finger) |
+| **Head** | 1-2 | 2-3 | Neck pan/tilt, cameras |
+
+**Total for Humanoid:**
+- **~45 links**
+- **~50 joints**
+- **URDF file size**: 500-2000 lines (depending on sensor detail)
+
+:::info Example: Unitree G1 URDF
+The Unitree G1 humanoid (released 2024) has a [public URDF file](https://github.com/unitreerobotics/unitree_ros) with:
+- 23 actuated joints (simplified hands)
+- 6 sensors (IMU, cameras, force-torque)
+- Full collision meshes for self-collision avoidance
+- Used in Gazebo and Isaac Sim simulations
+:::
+
+---
+
+## Advanced: Using Meshes Instead of Primitives
+
+For realistic visuals, use **3D mesh files** (.stl, .dae, .obj):
+
+```xml
+<visual>
+  <geometry>
+    <mesh filename="package://my_robot_description/meshes/thigh.stl" scale="0.001 0.001 0.001"/>
+    <!-- Scale converts mm (CAD files) to meters (ROS 2) -->
+  </geometry>
+</visual>
+```
+
+**Workflow:**
+1. **CAD Design**: Model robot in Fusion 360, SolidWorks, Blender
+2. **Export Mesh**: Save as .stl (collision) or .dae (visual with textures)
+3. **Reference in URDF**: Use `<mesh filename="..."/>`
+4. **Optimize**: Collision meshes should be low-poly (< 1000 triangles) for performance
+
+---
+
+## Hands-On Exercise: Add an Arm
+
+**Challenge:** Extend the `humanoid_leg.urdf` to include a **right arm** with:
+- **Upper arm**: 30cm cylinder, 2kg
+- **Forearm**: 25cm cylinder, 1.5kg
+- **Shoulder joint**: Revolute, rotates around X-axis, ±90°
+- **Elbow joint**: Revolute, rotates around Y-axis, 0° to 150°
+
+**Starter Code:**
+```xml
+<!-- Add to <robot> tag after leg links/joints -->
+
+<link name="upper_arm">
+  <!-- YOUR CODE HERE -->
+</link>
+
+<joint name="shoulder_joint" type="revolute">
+  <parent link="pelvis"/>
+  <child link="upper_arm"/>
+  <!-- YOUR CODE HERE -->
+</joint>
+```
+
+**Verification:**
+```bash
+ros2 launch urdf_tutorial display.launch.py model:=./humanoid_leg_and_arm.urdf
+```
+You should see 5 joint sliders: hip, knee, ankle, shoulder, elbow.
+
+---
+
+## Key Takeaways
+
+✅ **URDF** is XML format for defining robot structure  
+✅ **Links** are rigid body parts (bones)  
+✅ **Joints** connect links and define motion constraints  
+✅ **Revolute joints** are most common for humanoids (hinges)  
+✅ **RViz** visualizes URDF models interactively  
+✅ **Accurate mass/inertia/limits** are critical for simulation fidelity  
+
+---
+
+## What's Next?
+
+You've mastered the **robot's body definition**. The next module covers **Module 2: Simulation with NVIDIA Isaac Sim**—where you'll bring URDF models to life in a photorealistic physics simulator and train AI policies with millions of parallel experiences.
+
+---
+
+## Further Reading
+
+- [URDF Official Specification](http://wiki.ros.org/urdf/XML)
+- [URDF Tutorials (ROS 2)](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/URDF-Main.html)
+- [Building a Visual Robot Model (RViz)](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/Building-a-Visual-Robot-Model-with-URDF-from-Scratch.html)
+- [Xacro: XML Macros for URDF](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/Using-Xacro-to-Clean-Up-a-URDF-File.html) (for reducing repetition)
+- [MuJoCo MJCF vs URDF](https://mujoco.readthedocs.io/en/latest/XMLreference.html) (alternative format used by DeepMind)

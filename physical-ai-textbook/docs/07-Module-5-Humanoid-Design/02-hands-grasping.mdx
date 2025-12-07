@@ -1,0 +1,412 @@
+---
+sidebar_position: 2
+title: "Hands, Grasping, and Manipulation"
+description: "Dexterous manipulation, force control, and object grasping strategies"
+keywords: [robotic grasping, manipulation, force control, dexterous hands]
+---
+
+# Hands, Grasping, and Manipulation
+
+## Introduction
+
+Human hands possess **27 degrees of freedom (DOF)** and can perform incredibly complex tasks. Replicating this dexterity in robots remains one of the grand challenges of robotics.
+
+---
+
+## 1. Grasp Taxonomy
+
+### **1.1 Power Grasp vs. Precision Grasp**
+
+| Type | Example | DOF Required | Stability |
+|------|---------|--------------|-----------|
+| **Power Grasp** | Holding a hammer | 3-5 | High (large contact area) |
+| **Precision Grasp** | Picking a coin | 6-10 | Low (fingertip contact) |
+
+### **1.2 Common Grasp Types**
+
+1. **Parallel Jaw Grasp:** Simple 2-finger gripper
+2. **Tripod Grasp:** 3 fingers (thumb + 2 fingers)
+3. **Cylindrical Grasp:** Wrapping around objects
+4. **Spherical Grasp:** Enveloping spherical objects
+
+---
+
+## 2. Grasp Planning
+
+### **2.1 Grasp Quality Metrics**
+
+**Ferrari-Canny Metric (Force Closure):**
+
+A grasp has force closure if it can resist arbitrary external wrenches.
+
+```python
+import numpy as np
+
+def check_force_closure(contact_points, contact_normals):
+    """
+    Check if grasp satisfies force closure
+    
+    Args:
+        contact_points: Nx3 array of contact positions
+        contact_normals: Nx3 array of contact normals
+    """
+    # Build Grasp Matrix
+    G = build_grasp_matrix(contact_points, contact_normals)
+    
+    # Check if origin is in convex hull of wrench space
+    # (Simplified: check if G has full rank)
+    return np.linalg.matrix_rank(G) == 6  # 6-DOF wrench space
+
+def build_grasp_matrix(points, normals):
+    """
+    Construct grasp matrix G (6 x num_contacts)
+    """
+    G = []
+    for p, n in zip(points, normals):
+        # Force component
+        f = n
+        # Torque component: τ = r × f
+        tau = np.cross(p, n)
+        # Stack into wrench
+        G.append(np.hstack([f, tau]))
+    
+    return np.array(G).T
+```
+
+### **2.2 Grasp Sampling**
+
+**Antipodal Grasp Sampling:**
+```python
+def sample_antipodal_grasps(point_cloud, num_samples=100):
+    """
+    Sample antipodal grasp candidates from point cloud
+    """
+    grasps = []
+    
+    for _ in range(num_samples):
+        # Random point on object surface
+        p1_idx = np.random.randint(len(point_cloud))
+        p1 = point_cloud[p1_idx]
+        n1 = surface_normals[p1_idx]
+        
+        # Find opposing point
+        ray_direction = -n1
+        p2_idx = find_intersection(p1, ray_direction, point_cloud)
+        
+        if p2_idx is not None:
+            p2 = point_cloud[p2_idx]
+            n2 = surface_normals[p2_idx]
+            
+            # Check if normals are opposing
+            if np.dot(n1, n2) < -0.9:  # Nearly opposite
+                grasp = {'p1': p1, 'p2': p2, 'width': np.linalg.norm(p2 - p1)}
+                grasps.append(grasp)
+    
+    return grasps
+```
+
+---
+
+## 3. Force Control
+
+### **3.1 Impedance Control**
+
+Control the relationship between force and position:
+
+```
+F = K(x_desired - x) + B(ẋ_desired - ẋ)
+```
+
+**Python Implementation:**
+```python
+class ImpedanceController:
+    def __init__(self, stiffness, damping):
+        self.K = np.diag(stiffness)  # Stiffness matrix
+        self.B = np.diag(damping)    # Damping matrix
+    
+    def compute_force(self, x_desired, x_current, v_current):
+        """
+        Compute desired force for impedance control
+        """
+        pos_error = x_desired - x_current
+        vel_error = -v_current  # Assuming desired velocity = 0
+        
+        force = self.K @ pos_error + self.B @ vel_error
+        return force
+```
+
+### **3.2 Hybrid Force-Position Control**
+
+Control force in some directions, position in others:
+
+```python
+def hybrid_controller(x_desired, x_current, f_desired, f_measured, 
+                      selection_matrix):
+    """
+    Hybrid force/position control
+    
+    Args:
+        selection_matrix: Diagonal matrix (1 = force control, 0 = position control)
+    """
+    # Position control component
+    pos_error = x_desired - x_current
+    u_pos = Kp * pos_error
+    
+    # Force control component
+    force_error = f_desired - f_measured
+    u_force = Kf * force_error
+    
+    # Combine based on selection matrix
+    S = selection_matrix
+    u = (np.eye(6) - S) @ u_pos + S @ u_force
+    
+    return u
+```
+
+---
+
+## 4. Contact Modeling
+
+### **4.1 Coulomb Friction Model**
+
+```python
+def coulomb_friction(f_normal, f_tangential, mu=0.5):
+    """
+    Check if contact is slipping
+    
+    Args:
+        mu: Coefficient of friction
+    """
+    friction_cone = mu * abs(f_normal)
+    
+    if abs(f_tangential) <= friction_cone:
+        return "stick"  # No slip
+    else:
+        return "slip"
+```
+
+### **4.2 Soft Contact Model (Hunt-Crossley)**
+
+```python
+def soft_contact_force(penetration, velocity, k=1000, damping=10):
+    """
+    Nonlinear spring-damper contact model
+    """
+    if penetration > 0:
+        f_spring = k * penetration**1.5
+        f_damping = damping * penetration**0.5 * velocity
+        return f_spring + f_damping
+    else:
+        return 0.0  # No contact
+```
+
+---
+
+## 5. Dexterous Manipulation
+
+### **5.1 In-Hand Manipulation**
+
+**Finger Gaiting Strategy:**
+```python
+def finger_gait_rotation(object_pose, target_rotation, num_fingers=3):
+    """
+    Rotate object in-hand using sequential finger movements
+    """
+    rotation_per_step = target_rotation / num_fingers
+    
+    for i in range(num_fingers):
+        # Lift finger i
+        lift_finger(i)
+        
+        # Rotate object by small amount
+        rotate_object(rotation_per_step)
+        
+        # Reposition finger i
+        place_finger(i, new_position)
+        
+        # Wait for stabilization
+        time.sleep(0.1)
+```
+
+### **5.2 Peg-in-Hole Insertion**
+
+Classic assembly task requiring precision:
+
+```python
+def peg_in_hole_insertion(peg_pose, hole_pose, tolerance=0.001):
+    """
+    Insert peg into hole with force feedback
+    """
+    # Phase 1: Approach
+    move_to_pre_insertion_pose(peg_pose, hole_pose)
+    
+    # Phase 2: Search (spiral pattern)
+    for angle in np.linspace(0, 2*np.pi, 36):
+        offset_x = 0.002 * np.cos(angle)
+        offset_y = 0.002 * np.sin(angle)
+        
+        move_peg([offset_x, offset_y, 0])
+        
+        # Check force feedback
+        f_z = read_force_sensor()
+        if f_z < -5.0:  # Peg hit hole edge
+            break
+    
+    # Phase 3: Insertion with compliance
+    impedance_control = ImpedanceController(
+        stiffness=[100, 100, 1000],  # Soft in XY, stiff in Z
+        damping=[10, 10, 50]
+    )
+    
+    while get_insertion_depth() < target_depth:
+        force = impedance_control.compute_force(...)
+        apply_force(force)
+```
+
+---
+
+## 6. Grasp Stability and Failure Detection
+
+### **6.1 Slip Detection**
+
+```python
+class SlipDetector:
+    def __init__(self, threshold=0.1):
+        self.threshold = threshold
+        self.prev_forces = None
+    
+    def detect_slip(self, tactile_readings):
+        """
+        Detect slip from high-frequency tactile vibrations
+        """
+        if self.prev_forces is None:
+            self.prev_forces = tactile_readings
+            return False
+        
+        # Compute force derivative
+        force_change = np.abs(tactile_readings - self.prev_forces)
+        
+        # Check for sudden changes
+        if np.max(force_change) > self.threshold:
+            self.prev_forces = tactile_readings
+            return True  # Slip detected
+        
+        self.prev_forces = tactile_readings
+        return False
+```
+
+### **6.2 Grasp Recovery**
+
+```python
+def grasp_recovery(slip_detected, current_grip_force):
+    """
+    Increase grip force if slip is detected
+    """
+    if slip_detected:
+        new_force = min(current_grip_force * 1.5, MAX_GRIP_FORCE)
+        set_grip_force(new_force)
+        return new_force
+    else:
+        return current_grip_force
+```
+
+---
+
+## 7. ROS 2 Integration
+
+### **7.1 Gripper Control Node**
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float32
+from sensor_msgs.msg import JointState
+
+class GripperController(Node):
+    def __init__(self):
+        super().__init__('gripper_controller')
+        
+        self.grip_sub = self.create_subscription(
+            Float32,
+            '/gripper/command',
+            self.grip_callback,
+            10
+        )
+        
+        self.joint_pub = self.create_publisher(
+            JointState,
+            '/gripper/joint_states',
+            10
+        )
+    
+    def grip_callback(self, msg):
+        grip_width = msg.data  # Target grip width in meters
+        
+        # Convert to joint angles (example for parallel jaw)
+        joint_angle = self.width_to_angle(grip_width)
+        
+        # Publish joint command
+        joint_msg = JointState()
+        joint_msg.name = ['gripper_left_joint', 'gripper_right_joint']
+        joint_msg.position = [joint_angle, -joint_angle]
+        self.joint_pub.publish(joint_msg)
+    
+    def width_to_angle(self, width):
+        # Inverse kinematics for gripper
+        # (Depends on gripper geometry)
+        return width / 2.0  # Simplified
+
+def main():
+    rclpy.init()
+    node = GripperController()
+    rclpy.spin(node)
+```
+
+---
+
+## 8. Case Study: Shadow Dexterous Hand
+
+**Specifications:**
+- **DOF:** 24 (20 actuated, 4 coupled)
+- **Sensors:** 34 joint position sensors, 96 tactile sensors
+- **Control:** Position, velocity, and torque modes
+
+**Programming Example:**
+```python
+# Control finger 1 to flex
+def flex_index_finger(target_angle):
+    finger_joints = [
+        'ff_j4', 'ff_j3', 'ff_j2', 'ff_j1'  # Index finger
+    ]
+    
+    for joint in finger_joints:
+        set_joint_position(joint, target_angle)
+    
+    wait_for_motion_complete()
+```
+
+---
+
+## 9. Benchmarks and Datasets
+
+### **9.1 YCB Object Set**
+- 77 household objects
+- Standardized meshes and properties
+- Used for grasp planning benchmarks
+
+### **9.2 Grasp Databases**
+- **Columbia Grasp Database:** 10M+ synthetic grasps
+- **DexNet 4.0:** Deep learning for grasp planning
+
+---
+
+## Summary
+
+- ✅ Grasp taxonomy and quality metrics
+- ✅ Force closure and grasp planning
+- ✅ Impedance and hybrid force-position control
+- ✅ In-hand manipulation strategies
+- ✅ Slip detection and grasp recovery
+- ✅ ROS 2 gripper control implementation
+
+**Next:** Module 5.3 - Full-Body Dynamics and Whole-Body Control

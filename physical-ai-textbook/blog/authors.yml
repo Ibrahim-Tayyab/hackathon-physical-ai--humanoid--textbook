@@ -1,0 +1,22 @@
+ibrahim:
+  name: Muhammed Ibrahim
+  title: Physical AI Engineer & Robotics Researcher
+  url: https://github.com/Ibrahim-Tayyab
+  image_url: https://github.com/Ibrahim-Tayyab.png
+  page: true
+  socials:
+    github: Ibrahim-Tayyab
+
+robotics_lab:
+  name: Ibrahim Robotics Lab
+  title: Research & Development Team
+  url: https://github.com/Ibrahim-Tayyab?tab=repositories
+  image_url: https://github.com/github.png
+  page: false
+
+humanoid_team:
+  name: Ibrahim Tech Team
+  title: Engineering Contributors
+  url: https://github.com/Ibrahim-Tayyab?tab=repositories
+  image_url: https://github.com/github.png
+  page: false

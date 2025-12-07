@@ -1,0 +1,653 @@
+---
+sidebar_position: 3
+title: "Software Prerequisites"
+description: "Essential software setup: Docker, VS Code, Python, and development tools for Physical AI"
+keywords: [Docker, VS Code, Python, ROS 2, development environment, Ubuntu setup]
+---
+
+# Software Prerequisites
+
+## Overview
+
+With your Ubuntu 22.04 workstation ready, it's time to configure the development environment. This chapter will guide you through installing and configuring the essential software stack for Physical AI development.
+
+**What We'll Install:**
+1. **Docker** – Containerized environments for ROS 2 and Isaac Sim
+2. **VS Code** – Primary code editor with robotics extensions
+3. **Python 3.10+** – Programming language for robot control
+4. **Git** – Version control for your code
+5. **Essential Tools** – Curl, wget, build tools
+
+**Estimated Time:** 45 minutes
+
+---
+
+## Why Docker?
+
+### The Problem Docker Solves
+
+ROS 2 and robotics libraries have **complex dependency chains**:
+
+```
+ROS 2 Humble requires:
+├── Python 3.10
+├── Cyclone DDS
+├── Gazebo 11
+├── TF2 (Transform Library)
+├── OpenCV 4.5+
+├── ... (50+ packages)
+```
+
+Installing these manually:
+- Takes 3-4 hours
+- Breaks often (version conflicts)
+- Pollutes your system with global packages
+
+### Docker's Solution
+
+**Docker containers** are isolated environments that include:
+- All dependencies pre-installed
+- Specific versions locked (no conflicts)
+- Reproducible across machines
+
+**Analogy:** Think of Docker as a "virtual environment on steroids" that includes not just Python packages, but the entire operating system, libraries, and configuration.
+
+---
+
+## Installing Docker
+
+### Step 1: Remove Old Versions (If Any)
+
+```bash
+# Remove conflicting packages
+sudo apt remove docker docker-engine docker.io containerd runc
+```
+
+### Step 2: Install Docker from Official Repository
+
+```bash
+# Update package index
+sudo apt update
+
+# Install prerequisites
+sudo apt install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+# Add Docker's official GPG key
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Set up Docker repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker Engine
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+```
+
+### Step 3: Configure Docker Permissions
+
+By default, Docker requires `sudo`. Let's fix that:
+
+```bash
+# Add your user to the docker group
+sudo usermod -aG docker $USER
+
+# Apply group changes (logout/login or run this)
+newgrp docker
+
+# Verify (should work without sudo)
+docker run hello-world
+```
+
+**Expected Output:**
+```
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+```
+
+:::info Why Not Use Snap?
+Ubuntu offers Docker via Snap (`snap install docker`), but it has **known issues** with GPU passthrough for NVIDIA containers. Always use the official Docker repository.
+:::
+
+### Step 4: Install NVIDIA Container Toolkit
+
+This allows Docker containers to access your GPU:
+
+```bash
+# Add NVIDIA Container Toolkit repository
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
+    sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+# Install NVIDIA Docker runtime
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+
+# Restart Docker
+sudo systemctl restart docker
+```
+
+### Step 5: Verify GPU Access in Docker
+
+```bash
+# Run a test container with GPU access
+docker run --rm --gpus all nvidia/cuda:12.0.0-base-ubuntu22.04 nvidia-smi
+```
+
+**Expected Output:**
+```
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 535.54.03    Driver Version: 535.54.03    CUDA Version: 12.0   |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|===============================+======================+======================|
+|   0  NVIDIA GeForce ...  Off  | 00000000:01:00.0  On |                  N/A |
+|  0%   45C    P0    30W / 285W |   1024MiB / 12288MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+```
+
+:::tip Troubleshooting GPU Access
+If you see "could not select device driver," ensure:
+1. NVIDIA drivers are installed (`nvidia-smi` works outside Docker)
+2. You ran `sudo systemctl restart docker` after installing nvidia-container-toolkit
+3. You're using `--gpus all` flag in docker run command
+:::
+
+---
+
+## Installing Visual Studio Code
+
+### Step 1: Download and Install
+
+**Method 1: Via Snap (Easiest)**
+
+```bash
+sudo snap install --classic code
+```
+
+**Method 2: Via .deb Package (Recommended)**
+
+```bash
+# Download .deb package
+wget -O code.deb 'https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64'
+
+# Install
+sudo apt install ./code.deb
+
+# Clean up
+rm code.deb
+```
+
+### Step 2: Launch VS Code
+
+```bash
+code
+```
+
+### Step 3: Install Essential Extensions
+
+Open the Extensions panel (`Ctrl+Shift+X`) and install:
+
+1. **Python** (Microsoft)
+   - Syntax highlighting, IntelliSense, debugging
+
+2. **Pylance** (Microsoft)
+   - Fast Python language server
+
+3. **Docker** (Microsoft)
+   - Manage containers from VS Code
+
+4. **ROS** (Microsoft)
+   - ROS 2 syntax, debugging, visualization
+
+5. **C/C++** (Microsoft)
+   - Required for compiling ROS 2 packages
+
+6. **CMake Tools** (Microsoft)
+   - Build system integration
+
+7. **XML** (Red Hat)
+   - For URDF robot description files
+
+8. **YAML** (Red Hat)
+   - For ROS 2 launch files and configuration
+
+**Quick Install via CLI:**
+
+```bash
+code --install-extension ms-python.python
+code --install-extension ms-python.vscode-pylance
+code --install-extension ms-azuretools.vscode-docker
+code --install-extension ms-iot.vscode-ros
+code --install-extension ms-vscode.cpptools
+code --install-extension ms-vscode.cmake-tools
+code --install-extension redhat.vscode-xml
+code --install-extension redhat.vscode-yaml
+```
+
+### Step 4: Configure Python Interpreter
+
+1. Open Command Palette (`Ctrl+Shift+P`)
+2. Type "Python: Select Interpreter"
+3. Choose `/usr/bin/python3` (system Python 3.10)
+
+---
+
+## Python Setup
+
+### Verify Python Version
+
+Ubuntu 22.04 comes with Python 3.10:
+
+```bash
+python3 --version
+# Expected: Python 3.10.12 or newer
+```
+
+### Install pip (Package Manager)
+
+```bash
+# Install pip for Python 3
+sudo apt install python3-pip
+
+# Verify
+pip3 --version
+# Expected: pip 22.0.2 or newer
+```
+
+### Install Development Tools
+
+```bash
+# Install Python development headers (needed for compiling C extensions)
+sudo apt install python3-dev
+
+# Install virtualenv (for isolated environments)
+pip3 install virtualenv
+```
+
+### Create a Virtual Environment (Optional but Recommended)
+
+For non-Docker projects, use virtual environments to isolate dependencies:
+
+```bash
+# Create a virtual environment
+python3 -m venv ~/ros2_venv
+
+# Activate it
+source ~/ros2_venv/bin/activate
+
+# Your prompt will now show (ros2_venv)
+
+# Install packages in this isolated environment
+pip install numpy scipy matplotlib
+
+# Deactivate when done
+deactivate
+```
+
+:::info Docker vs Virtual Environments
+- **Docker:** Use for ROS 2, Gazebo, Isaac Sim (system-level dependencies)
+- **venv:** Use for pure Python projects (data analysis, ML training)
+:::
+
+---
+
+## Git Version Control
+
+### Install Git
+
+```bash
+# Install Git
+sudo apt install git
+
+# Verify
+git --version
+# Expected: git version 2.34.1 or newer
+```
+
+### Configure Git
+
+```bash
+# Set your name and email (used in commits)
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Set default branch name to 'main'
+git config --global init.defaultBranch main
+
+# Enable colored output
+git config --global color.ui auto
+
+# Set default editor to VS Code
+git config --global core.editor "code --wait"
+```
+
+### Verify Configuration
+
+```bash
+git config --list
+```
+
+---
+
+## Essential Command-Line Tools
+
+### Install Build Tools
+
+```bash
+# GCC, Make, and other compilation tools
+sudo apt install build-essential
+
+# CMake (required for building ROS 2 packages)
+sudo apt install cmake
+
+# Verify
+gcc --version    # Should show gcc (Ubuntu 11.x)
+make --version   # Should show GNU Make 4.3
+cmake --version  # Should show cmake 3.22+
+```
+
+### Install Network Tools
+
+```bash
+# wget (download files from URLs)
+sudo apt install wget
+
+# curl (transfer data with URLs, used in many scripts)
+sudo apt install curl
+
+# net-tools (ifconfig, netstat)
+sudo apt install net-tools
+```
+
+### Install Productivity Tools
+
+```bash
+# htop (system monitor)
+sudo apt install htop
+
+# tree (visualize directory structure)
+sudo apt install tree
+
+# tmux (terminal multiplexer for managing multiple sessions)
+sudo apt install tmux
+```
+
+---
+
+## Docker Compose Setup
+
+Docker Compose lets you define multi-container applications in YAML files.
+
+### Install Docker Compose Plugin
+
+(Already installed if you followed Docker installation steps above)
+
+```bash
+# Verify installation
+docker compose version
+# Expected: Docker Compose version v2.20.0 or newer
+```
+
+### Example: Multi-Container ROS 2 Setup
+
+Create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  ros2-master:
+    image: ros:humble
+    container_name: ros2_master
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=42
+    command: ros2 run demo_nodes_cpp talker
+
+  ros2-listener:
+    image: ros:humble
+    container_name: ros2_listener
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=42
+    command: ros2 run demo_nodes_cpp listener
+```
+
+**Run it:**
+
+```bash
+docker compose up
+```
+
+**Expected Output:**
+```
+ros2_master     | [INFO] Publishing: 'Hello World: 1'
+ros2_listener   | [INFO] I heard: [Hello World: 1]
+```
+
+---
+
+## Verification Checklist
+
+Before proceeding to ROS 2 installation, verify:
+
+```bash
+# 1. Docker works without sudo
+docker ps
+# Expected: Empty list (no errors)
+
+# 2. Docker has GPU access
+docker run --rm --gpus all nvidia/cuda:12.0.0-base-ubuntu22.04 nvidia-smi
+# Expected: GPU info displayed
+
+# 3. VS Code installed
+code --version
+# Expected: Version number
+
+# 4. Python 3.10+ available
+python3 --version
+# Expected: Python 3.10.x
+
+# 5. Git configured
+git config user.name
+# Expected: Your name
+
+# 6. Build tools available
+gcc --version && cmake --version
+# Expected: Version numbers for both
+```
+
+:::success Checkpoint Passed
+If all commands above work, you're ready to install ROS 2 Humble! 🎉
+:::
+
+---
+
+## Common Issues and Solutions
+
+### Issue: Docker Permission Denied
+
+**Symptom:**
+```bash
+docker: Got permission denied while trying to connect to the Docker daemon socket
+```
+
+**Solution:**
+```bash
+# Add yourself to docker group
+sudo usermod -aG docker $USER
+
+# Log out and log back in, or run:
+newgrp docker
+```
+
+---
+
+### Issue: NVIDIA-SMI Not Found in Docker
+
+**Symptom:**
+```bash
+docker run --rm --gpus all nvidia/cuda:12.0.0-base-ubuntu22.04 nvidia-smi
+# Error: nvidia-smi: command not found
+```
+
+**Solution:**
+```bash
+# Reinstall NVIDIA Container Toolkit
+sudo apt purge nvidia-container-toolkit
+sudo apt install nvidia-container-toolkit
+
+# Restart Docker
+sudo systemctl restart docker
+```
+
+---
+
+### Issue: VS Code Extensions Not Working
+
+**Symptom:**
+Python extension doesn't provide autocomplete or linting.
+
+**Solution:**
+```bash
+# Ensure Python extension is installed
+code --install-extension ms-python.python
+
+# Ensure Pylance is installed
+code --install-extension ms-python.vscode-pylance
+
+# Reload VS Code window
+# Ctrl+Shift+P → "Developer: Reload Window"
+```
+
+---
+
+### Issue: Git Push Requires Username/Password Every Time
+
+**Symptom:**
+GitHub asks for credentials on every push.
+
+**Solution (Use SSH Keys):**
+
+```bash
+# Generate SSH key
+ssh-keygen -t ed25519 -C "your.email@example.com"
+
+# Press Enter to accept default location
+# Set a passphrase (or press Enter for none)
+
+# Copy public key to clipboard
+cat ~/.ssh/id_ed25519.pub
+
+# Add this key to GitHub:
+# 1. Go to github.com → Settings → SSH and GPG keys
+# 2. Click "New SSH key"
+# 3. Paste your public key
+# 4. Save
+
+# Test connection
+ssh -T git@github.com
+# Expected: "Hi [username]! You've successfully authenticated..."
+```
+
+---
+
+## Development Workflow Example
+
+Here's a typical development session:
+
+```bash
+# 1. Start Docker containers
+cd ~/physical_ai_project
+docker compose up -d
+
+# 2. Open VS Code
+code .
+
+# 3. Attach VS Code to running container
+# (Use "Dev Containers" extension)
+
+# 4. Write code, test in container
+
+# 5. Commit changes
+git add .
+git commit -m "Implemented robot navigation"
+git push
+
+# 6. Stop containers when done
+docker compose down
+```
+
+---
+
+## Next Steps
+
+With your development environment configured, you're ready to:
+
+1. **Install ROS 2 Humble** (Module 1, Chapter 1)
+2. **Set up Gazebo Simulator** (Module 2, Chapter 1)
+3. **Install Isaac Sim** (Module 3, Chapter 1)
+
+The foundation is laid. Now it's time to build robots! 🤖
+
+---
+
+**Next Module:** [ROS 2 Fundamentals →](../02-Module-1-ROS2/01-nodes-topics.mdx)
+
+---
+
+:::tip Keyboard Shortcuts for Productivity
+
+**VS Code:**
+- `Ctrl+Shift+P` – Command Palette
+- `Ctrl+`` – Toggle Terminal
+- `Ctrl+B` – Toggle Sidebar
+- `Ctrl+Shift+F` – Search in all files
+
+**Terminal (Bash):**
+- `Ctrl+R` – Search command history
+- `Ctrl+A` – Jump to beginning of line
+- `Ctrl+E` – Jump to end of line
+- `Ctrl+L` – Clear screen
+:::
+
+:::info Resource Management
+Running multiple Docker containers + Isaac Sim can consume significant resources. Use `htop` to monitor CPU/RAM/GPU usage. If system slows down, close unnecessary applications or reduce simulation complexity.
+:::
+
+---
+
+## Additional Resources
+
+### Official Documentation
+- [Docker Docs](https://docs.docker.com/)
+- [VS Code Docs](https://code.visualstudio.com/docs)
+- [ROS 2 Humble Docs](https://docs.ros.org/en/humble/)
+
+### Tutorials
+- [Docker for Beginners](https://docker-curriculum.com/)
+- [Git Handbook](https://guides.github.com/introduction/git-handbook/)
+- [Python Virtual Environments](https://realpython.com/python-virtual-environments-a-primer/)
+
+### Community
+- [ROS Discourse](https://discourse.ros.org/)
+- [Docker Community Forums](https://forums.docker.com/)
+- [Physical AI Discord](#) (link in course materials)
+
+---
+
+**Environment Setup Complete!** ✅
+
+You now have a fully configured Ubuntu 22.04 workstation ready for Physical AI development. In the next module, we'll dive into ROS 2 and start controlling robots.

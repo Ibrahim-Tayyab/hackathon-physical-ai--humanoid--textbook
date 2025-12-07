@@ -1,0 +1,30 @@
+.rtlToggle {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.rtlToggle:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.rtlToggle:active {
+    transform: translateY(0);
+}
+
+[data-theme='light'] .rtlToggle {
+    background: var(--primary);
+    color: white;
+}
+
+[data-theme='light'] .rtlToggle:hover {
+    background: var(--primary-hover);
+}

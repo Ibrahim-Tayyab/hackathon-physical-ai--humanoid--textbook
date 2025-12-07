@@ -1,0 +1,165 @@
+---
+sidebar_position: 4
+title: "Week-by-Week Course Timeline"
+description: "Detailed 13-week breakdown of the Physical AI curriculum"
+keywords: [course timeline, weekly schedule, physical AI curriculum]
+---
+
+# Week-by-Week Course Timeline
+
+## Overview
+This course is structured as a **13-week intensive program** designed to take you from fundamentals to building autonomous humanoid robots.
+
+---
+
+## **Week 1-2: Foundations**
+
+### Week 1: Introduction to Physical AI
+- **Topics:**
+  - Digital vs Embodied Intelligence
+  - Robotics ecosystem overview
+  - Development environment setup
+- **Lab:** Install ROS 2 Humble, Python 3.10, Gazebo Classic
+- **Assignment:** Environment verification report
+
+### Week 2: ROS 2 Fundamentals
+- **Topics:**
+  - Nodes, Topics, Services
+  - Publisher/Subscriber patterns
+  - ROS 2 workspace structure
+- **Lab:** Build your first ROS 2 node
+- **Assignment:** Multi-node communication system
+
+---
+
+## **Week 3-5: Module 1 - The Robotic Nervous System**
+
+### Week 3: Python + ROS 2 Integration
+- **Topics:**
+  - rclpy library deep dive
+  - Custom messages and services
+  - Parameter management
+- **Lab:** Python-controlled robot arm simulation
+- **Assignment:** Voice-to-motion controller
+
+### Week 4: Robot Description (URDF)
+- **Topics:**
+  - URDF syntax and structure
+  - Joints, Links, and Kinematics
+  - Xacro for modular robot definitions
+- **Lab:** Model a humanoid torso in URDF
+- **Assignment:** Full humanoid URDF with 20+ joints
+
+### Week 5: ROS 2 Mini-Project
+- **Project:** Design a robotic nervous system that responds to sensor inputs
+- **Deliverable:** GitHub repository with documentation
+
+---
+
+## **Week 6-8: Module 2 - Digital Twin & Simulation**
+
+### Week 6: Gazebo Physics Engine
+- **Topics:**
+  - World files, SDF format
+  - Physics parameters (gravity, friction, inertia)
+  - Sensor plugins (cameras, LIDAR, IMU)
+- **Lab:** Simulate a humanoid in a physics environment
+- **Assignment:** Custom world with obstacles
+
+### Week 7: Advanced Sensors & Unity Integration
+- **Topics:**
+  - Depth cameras, force-torque sensors
+  - Unity-ROS bridge
+  - High-fidelity visualization
+- **Lab:** LIDAR-based mapping in Gazebo
+- **Assignment:** Unity visualization of robot telemetry
+
+### Week 8: Sim-to-Real Gap
+- **Topics:**
+  - Domain randomization
+  - Sensor noise modeling
+  - Calibration strategies
+- **Lab:** Compare sim vs real sensor data
+- **Assignment:** Analysis report on sim-to-real differences
+
+---
+
+## **Week 9-11: Module 3 - The AI-Robot Brain**
+
+### Week 9: NVIDIA Isaac Sim
+- **Topics:**
+  - Omniverse platform overview
+  - Isaac Sim workflow
+  - Synthetic data generation
+- **Lab:** Train a perception model on synthetic data
+- **Assignment:** Object detection pipeline
+
+### Week 10: Navigation & Path Planning
+- **Topics:**
+  - Nav2 stack architecture
+  - VSLAM (Visual SLAM)
+  - Costmaps and obstacle avoidance
+- **Lab:** Implement Nav2 for a mobile robot
+- **Assignment:** Autonomous navigation in a complex environment
+
+### Week 11: Reinforcement Learning for Control
+- **Topics:**
+  - RL basics (Q-learning, Policy Gradients)
+  - Isaac Gym for parallel simulation
+  - Training bipedal locomotion
+- **Lab:** Train a walking policy with Isaac Gym
+- **Assignment:** Evaluate policy on uneven terrain
+
+---
+
+## **Week 12: Module 4 - Vision-Language-Action (VLA)**
+
+### Week 12: Conversational Robotics
+- **Topics:**
+  - Speech recognition with Whisper
+  - LLM integration (GPT-4, LLaMA)
+  - Multi-modal fusion (text, voice, vision)
+- **Lab:** Voice command system: "Pick up the red cube"
+- **Assignment:** Build a VLA agent with memory
+
+---
+
+## **Week 13: Capstone Project**
+
+### Final Week: Autonomous Humanoid System
+- **Objective:** Build an end-to-end system
+- **Requirements:**
+  1. Voice command input (Whisper)
+  2. LLM-based task planning
+  3. Nav2 path planning
+  4. Object detection and manipulation
+  5. Obstacle avoidance
+- **Deliverable:** Live demo + technical report
+- **Evaluation:**
+  - System architecture (20%)
+  - Code quality (20%)
+  - Demo performance (30%)
+  - Documentation (20%)
+  - Innovation (10%)
+
+---
+
+## **Assessment Structure**
+
+| Component | Weight | Description |
+|-----------|--------|-------------|
+| Weekly Labs | 30% | Hands-on exercises (Week 1-12) |
+| Assignments | 30% | Take-home projects (5 total) |
+| Mini-Projects | 20% | Module 1 & 2 milestones |
+| Capstone | 20% | Final autonomous humanoid demo |
+
+---
+
+## **Prerequisites Check**
+
+Before Week 1, ensure you have:
+- [ ] Ubuntu 22.04 or equivalent Linux environment
+- [ ] Python 3.10+
+- [ ] GPU with CUDA support (recommended: RTX 3060+)
+- [ ] 16GB+ RAM, 50GB+ storage
+- [ ] Git, Docker installed
