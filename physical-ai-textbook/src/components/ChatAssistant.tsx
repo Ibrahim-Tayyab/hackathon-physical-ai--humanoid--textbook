@@ -19,7 +19,7 @@ interface Source {
 
 const API_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:8000'
-    : '/api';
+    : 'https://hackathon-physical-ai-humanoid-text-kappa.vercel.app/api';
 
 export default function ChatAssistant() {
     const isBrowser = useIsBrowser();
