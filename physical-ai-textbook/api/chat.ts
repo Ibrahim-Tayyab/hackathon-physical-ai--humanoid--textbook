@@ -27,21 +27,30 @@ export default async function handler(
     }
 
     try {
-        const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8000';
+        const backendUrl = process.env.BACKEND_API_URL || 'same';
         const { message, conversation_history } = req.body;
 
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        const response = await fetch(`${backendUrl}/chat`, {
+        let chatUrl: string;
+
+        if (backendUrl === 'same') {
+            // Backend is on same Vercel deployment
+            chatUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/chat`;
+        } else {
+            // Backend is on external service
+            chatUrl = `${backendUrl}/chat`;
+        }
+
+        const response = await fetch(chatUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message,
                 conversation_history: conversation_history || [],
             }),
-            timeout: 30000,
         });
 
         const data = await response.json();

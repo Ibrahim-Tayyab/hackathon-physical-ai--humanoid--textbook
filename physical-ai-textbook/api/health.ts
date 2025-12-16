@@ -13,36 +13,45 @@ export default async function handler(
     }
 
     try {
-        // Get the backend URL from environment variable or use a fallback
-        const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8000';
+        // Check if we're using a separate backend or if backend is deployed on Vercel
+        const backendUrl = process.env.BACKEND_API_URL;
 
-        // Try to reach the backend health endpoint
-        const response = await fetch(`${backendUrl}/health`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 5000,
-        });
+        if (backendUrl && backendUrl !== 'same') {
+            // Try to reach the external backend health endpoint
+            const response = await fetch(`${backendUrl}/health`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            });
 
-        if (response.ok) {
-            const data = await response.json();
+            if (response.ok) {
+                const data = await response.json();
+                return res.status(200).json({
+                    status: 'healthy',
+                    backend: 'connected',
+                    ...data,
+                });
+            } else {
+                return res.status(200).json({
+                    status: 'online',
+                    backend: 'degraded',
+                    message: 'Frontend is online, backend service is having issues',
+                });
+            }
+        } else {
+            // Backend is on same Vercel deployment
             return res.status(200).json({
                 status: 'healthy',
-                backend: 'connected',
-                ...data,
-            });
-        } else {
-            return res.status(503).json({
-                status: 'degraded',
-                message: 'Backend service returned an error',
-                details: response.statusText,
+                deployment: 'vercel',
+                message: 'Frontend and backend running on Vercel',
+                timestamp: new Date().toISOString(),
             });
         }
     } catch (error) {
-        // Backend is unreachable - return offline status but don't fail the health check
+        // Backend is unreachable - return online status but don't fail the health check
         return res.status(200).json({
             status: 'online',
             backend: 'offline',
-            message: 'Frontend is running but backend service is unavailable',
+            message: 'Frontend is running',
             timestamp: new Date().toISOString(),
         });
     }

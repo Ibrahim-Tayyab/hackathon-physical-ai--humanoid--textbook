@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "chatbot/api.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "chatbot/api.py"
+        }
+    ],
+    "env": {
+        "QDRANT_URL": "@qdrant_url",
+        "QDRANT_API_KEY": "@qdrant_api_key",
+        "COHERE_API_KEY": "@cohere_api_key",
+        "GOOGLE_API_KEY": "@google_api_key",
+        "COLLECTION_NAME": "physical_ai_book",
+        "TOP_K_RESULTS": "5",
+        "MODEL_NAME": "gemini-1.5-flash",
+        "LOG_LEVEL": "INFO"
+    }
+}
