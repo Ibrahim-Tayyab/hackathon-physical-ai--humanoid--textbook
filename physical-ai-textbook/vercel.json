@@ -1,0 +1,13 @@
+{
+    "buildCommand": "npm run build",
+    "outputDirectory": "build",
+    "env": {
+        "BACKEND_URL": "@backend_url"
+    },
+    "functions": {
+        "api/**/*.ts": {
+            "memory": 512,
+            "maxDuration": 30
+        }
+    }
+}
